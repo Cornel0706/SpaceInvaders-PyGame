@@ -45,3 +45,19 @@ We have transitioned from a basic prototype to a fully-featured arcade experienc
 **Collision Logic:** Implemented a robust "Invulnerability Frame" (i-frame) system to prevent instant deaths from multiple hits.
 
 ---
+
+## 🚀 What's New in v0.3?
+
+### 👹 The Mothership (Boss Entity)
+
+**Dynamic Scaling:** The Boss is significantly larger and has a dedicated health system.
+**Combat Phases (Enrage Mode):**
+Above 50% HP: The Boss moves at standard speed and fires __________ (completează tu: single shots / basic lasers).
+Below 50% HP: The Boss enters **Enrage Mode**, increasing its speed by __________% and switching to a **Triple Shot Spread** pattern.
+**Smart Projectiles:** Enemies and the Boss now use a dictionary-based projectile system, allowing for __________ (completează tu: diagonal movement / variable horizontal speeds).
+
+### 🛠️ Technical Improvements
+
+**Advanced Collision Logic:** Implemented a `hit_something` flag to optimize bullet interactions and prevent __________.
+**Multi-Point Explosions:** Defeating the Boss triggers a chain reaction o  explosions across its frame.
+**State-Based Level Management:** A new level manager that uses the spawn_level_content() operator to toggle between standard waves and Boss encounters.

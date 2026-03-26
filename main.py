@@ -3,7 +3,7 @@ import sys
 import random
 import ctypes
 
-# Screen Optimisation ( DPI Awarness)
+# Screen Optimisation (DPI Awareness)
 try:
     ctypes.windll.user32.SetProcessDPIAware()
 except:
@@ -13,12 +13,12 @@ except:
 pygame.init()
 pygame.mixer.init()
 
-# --- SCREEN SETINGS ---
+# --- SCREEN SETTINGS ---
 info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
-pygame.display.set_caption("Space Invaders - v0.2")
+pygame.display.set_caption("Space Invaders - v0.3 Boss Update")
 
 # --- RESOURCES ---
 try:
@@ -44,6 +44,8 @@ enemy_img = pygame.transform.scale(pygame.image.load('enemy.png'), (80, 60))
 background_img = pygame.image.load('background.png')
 menu_background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
+
+
 # --- GAME VARIABLES ---
 game_state = "MENU"
 score_value = 0
@@ -53,7 +55,7 @@ level_transition_time = 0
 bg_scroll_y = 0
 bg_scroll_speed = 2
 
-# Object
+# Object dimensions
 player_width, player_height = 100, 80
 enemy_width, enemy_height = 80, 60
 bullet_width, bullet_height = 5, 15
@@ -71,12 +73,40 @@ enemy_bullet_speed = 7
 last_hit_time = 0
 invulnerability_duration = 2500
 
-# Star System (Parallax)
-stars = []
-for _ in range(150):
-    stars.append([random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), random.uniform(0.5, 3.5)])
+# Star System
+stars = [[random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), random.uniform(0.5, 3.5)] for _ in range(150)]
+
+# BOSS DICTIONARY
+boss = {
+    "rect" : pygame.Rect(SCREEN_WIDTH//2 - 150, 80, 480, 300),
+    "hp" : 100,
+    "max_hp": 100,
+    "visible" : False,
+    "speed_x" : 5,
+    "enraged" : False
+}
+
+try:
+    boss_img_raw = pygame.image.load('boss.png').convert_alpha()
+    # Scalam imaginea exact la dimensiunile dreptunghiului Boss-ului
+    boss_img = pygame.transform.scale(boss_img_raw, (boss["rect"].width, boss["rect"].height))
+except:
+    # Dacă nu găsește poza, desenează un dreptunghi mov ca placeholder
+    boss_img = pygame.Surface((boss["rect"].width, boss["rect"].height))
+    boss_img.fill((150, 0, 150))
+    print("Imaginea pentru Boss nu a putut fi încărcată. Folosim placeholder.")
 
 # --- FUNCTIONS ---
+def boss_hp_bar():
+    if boss["visible"]:
+        bar_width = 400
+        bar_height = 50
+        pos_y = 120
+        # Folosim max_hp pentru a calcula proportia corect
+        fill_width = int((boss["hp"] / boss["max_hp"]) * bar_width)
+        pygame.draw.rect(screen, (150, 0, 0), (SCREEN_WIDTH//2 - bar_width//2, pos_y, bar_width, bar_height))
+        pygame.draw.rect(screen, (0, 255, 0), (SCREEN_WIDTH//2 - bar_width//2, pos_y, fill_width, bar_height))
+        pygame.draw.rect(screen, (255, 255, 255), (SCREEN_WIDTH//2 - bar_width//2, pos_y, bar_width, bar_height), 2)
 
 def draw_text(text, font, color, x, y):
     surface = font.render(text, True, color)
@@ -87,16 +117,24 @@ def spawn_enemies():
     global enemies
     enemies.clear()
     gap_x, gap_y = 135, 100
-    total_cols, total_rows = 15, 6
+    total_cols, total_rows = 12, 5
     start_x = (SCREEN_WIDTH - (total_cols * gap_x)) // 2
     for row in range(total_rows):
         for col in range(total_cols):
-            enemy_x = start_x + col * gap_x
-            enemy_y = 100 + row * gap_y
-            enemies.append(pygame.Rect(enemy_x, enemy_y, enemy_width, enemy_height))
+            enemies.append(pygame.Rect(start_x + col * gap_x, 150 + row * gap_y, enemy_width, enemy_height))
+
+def spawn_level_content():
+    if current_level % 5 == 0:
+        boss["visible"] = True
+        boss["hp"] = 100 + (current_level * 20)
+        boss["max_hp"] = boss["hp"]
+        enemies.clear()
+    else:
+        boss["visible"] = False
+        spawn_enemies()
 
 def reset_game():
-    global score_value, lives, current_level, enemy_speed_x, enemy_bullet_speed, enemy_direction
+    global score_value, lives, current_level, enemy_speed_x, enemy_bullet_speed, enemy_direction, invulnerability_duration
     score_value = 0
     lives = 3
     current_level = 1
@@ -106,7 +144,9 @@ def reset_game():
     invulnerability_duration = 2000
     bullets.clear()
     enemy_bullets.clear()
-    spawn_enemies()
+    powerups.clear()
+    particles.clear()
+    spawn_level_content()
 
 def draw_scrolling_background(speed):
     global bg_scroll_y
@@ -129,8 +169,10 @@ def save_high_score(new_score):
     global high_score
     if new_score > high_score:
         high_score = new_score
-        with open("highscore.txt", "w") as f:
-            f.write(str(high_score))
+        try:
+            with open("highscore.txt", "w") as f:
+                f.write(str(high_score))
+        except: pass
 
 def show_ui():
     draw_text(f"SCORE: {score_value}", score_font, (255, 255, 255), 160, 50)
@@ -139,23 +181,23 @@ def show_ui():
     draw_text(f"LEVEL: {current_level}", score_font, (0, 255, 255), SCREEN_WIDTH // 2, 50)
 
 def create_explosion(x, y):
-    for _ in range(15):
-        particle = {
+    for _ in range(20):
+        particles.append({
             'pos' : [x, y],
-            'vel' : [random.uniform(-5, 5), random.uniform(-5, 5)],
+            'vel' : [random.uniform(-6, 6), random.uniform(-6, 6)],
             'timer' : random.randint(20, 50),
             'color' : (255, random.randint(100, 200), 0)
-        }
-        particles.append(particle)
+        })
 
 # --- MAIN LOOP ---
 clock = pygame.time.Clock()
 
 while True:
+    current_time = pygame.time.get_ticks()
+    
     if game_state == "MENU":
         pygame.mouse.set_visible(True)
         draw_scrolling_background(bg_scroll_speed)
-        
         draw_text("SPACE INVADERS", title_font, (0, 255, 0), SCREEN_WIDTH//2, SCREEN_HEIGHT//3)
         start_btn = pygame.Rect(0, 0, 450, 70); start_btn.center = (SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 100)
         quit_btn = pygame.Rect(0, 0, 450, 70); quit_btn.center = (SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 220)
@@ -183,7 +225,9 @@ while True:
         m_x, m_y = pygame.mouse.get_pos()
         player_x = m_x - player_width // 2
         player_y = m_y - player_height // 2
+        player_rect = pygame.Rect(player_x, player_y, player_width, player_height)
 
+        # 1. Input Management
         for event in pygame.event.get():
             if event.type == pygame.QUIT: pygame.quit(); sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -191,179 +235,181 @@ while True:
                 shoot_sound.play()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: save_high_score(score_value); game_state = "MENU"
+
+        # 2. BOSS LOGIC (Movement & Shooting)
+        if boss["visible"]:
+            if boss["hp"] < boss["max_hp"] * 0.5 and not boss["enraged"]:
+                boss["speed_x"] *= 1.5
+                boss["enraged"] = True
         
-        # Powerups Logic 
-        for p in powerups[:]:
-            p["rect"].y += 4
-
-            color = (0, 200, 255) if p["type"] == "shield" else (255, 50, 50)
-            pygame.draw.rect(screen ,color,  p["rect"], border_radius = 5)
-
-            if p["rect"].colliderect(player_rect):
-                if p["type"] == "shield":
-                    last_hit_time = pygame.time.get_ticks() + 3500
-                elif p["type"] == "life":
-                    lives += 1
-                powerups.remove(p)
-            elif p["rect"].y > SCREEN_HEIGHT:
-                powerups.remove(p)
-
-        # Enemies Movement
-        move_down_now = False
-        current_time = pygame.time.get_ticks()
-        player_rect = pygame.Rect(player_x, player_y, player_width, player_height) 
-        
-        for e in enemies:
-            e.x += enemy_speed_x * enemy_direction
+            boss["rect"].x += boss["speed_x"]
+            if boss["rect"].right >= SCREEN_WIDTH or boss["rect"].left <= 0:
+                boss["speed_x"] *= -1
             
-            
-            if player_rect.colliderect(e) and (current_time - last_hit_time > invulnerability_duration):
-                hit_sound.play()
-                lives -= 1
-                last_hit_time = current_time
-                if lives <= 0:
-                    save_high_score(score_value)
-                    game_state = "GAME_OVER"
+            # Boss Shooting
+            if random.randint(0, 30) == 1:
+                if not boss["enraged"]:
+                    enemy_bullets.append({"rect": pygame.Rect(boss["rect"].centerx, boss["rect"].bottom, 10, 25), "vx": 0})
                 else:
-                    enemies.clear()
-                    enemy_bullets.clear()
-                    spawn_enemies()
-                break 
+                    enemy_bullets.append({"rect": pygame.Rect(boss["rect"].left, boss["rect"].bottom, 10, 25), "vx": -3}) 
+                    enemy_bullets.append({"rect": pygame.Rect(boss["rect"].centerx, boss["rect"].bottom, 10, 25), "vx": 0}) 
+                    enemy_bullets.append({"rect": pygame.Rect(boss["rect"].right - 10, boss["rect"].bottom, 10, 25), "vx": 3})  
 
-            if e.right >= SCREEN_WIDTH or e.left <= 0:
-                move_down_now = True
-        
-        if move_down_now:
-            enemy_direction *= -1
+        # 3. Enemy Movement (Standard)
+        if not boss["visible"]:
+            move_down_now = False
             for e in enemies:
-                e.y += enemy_move_down
+                e.x += enemy_speed_x * enemy_direction
+                if e.right >= SCREEN_WIDTH or e.left <= 0: move_down_now = True
+                
+                # Collision player-enemy
+                if player_rect.colliderect(e) and (current_time - last_hit_time > invulnerability_duration):
+                    hit_sound.play()
+                    lives -= 1
+                    last_hit_time = current_time
+                    if lives <= 0: save_high_score(score_value); game_state = "GAME_OVER"
+                    else: spawn_level_content() # Reset level layout
+                    break
             
-            if any(e.bottom >= player_y for e in enemies):
-                hit_sound.play()
-                lives -= 1
-                if lives <= 0:
-                    save_high_score(score_value)
-                    game_state = "GAME_OVER"
-                else:
-                    enemies.clear()
-                    spawn_enemies()
+            if move_down_now:
+                enemy_direction *= -1
+                for e in enemies: e.y += enemy_move_down
 
-        # Bullets & Collisions
+        # 4. Bullets & Collisions
         for b in bullets[:]:
             b.y -= 18
-            if b.y < 0: bullets.remove(b)
-            for e in enemies[:]:
-                if b.colliderect(e):
-                    create_explosion(e.centerx, e.centery)
+            if b.y < 0: 
+                bullets.remove(b)
+                continue 
+            
+            hit_something = False
+            
+            # Hit Boss
+            if boss["visible"] and b.colliderect(boss["rect"]):
+                boss["hp"] -= 2
+                hit_sound.play()
+                bullets.remove(b)
+                hit_something = True
+                if boss["hp"] <= 0:
+                    create_explosion(boss["rect"].centerx, boss["rect"].centery)
+                    create_explosion(boss["rect"].left, boss["rect"].top)
+                    create_explosion(boss["rect"].right, boss["rect"].bottom)
 
-                    #Power Ups Drops
-                    if random.random() < 0.1:
-                        pu_type = "shield" if random.random() > 0.5 else "life"
-                        powerups.append({"rect": pygame.Rect(e.x, e.y, 25, 25), "type": pu_type})
-
-                    enemies.remove(e)
-                    score_value += 10
-                    hit_sound.play()
-                    if b in bullets:
+                    boss["enraged"] = False
+                    boss["visible"] = False
+                    boss["speed_x"] = 5
+            
+            # Hit Enemies
+            if not hit_something:
+                for e in enemies[:]:
+                    if b.colliderect(e):
+                        create_explosion(e.centerx, e.centery)
+                        if random.random() < 0.05:
+                            pu_type = "shield" if random.random() > 0.2 else "life" 
+                            powerups.append({"rect": pygame.Rect(e.x, e.y, 25, 25), "type": pu_type})
+                        enemies.remove(e)
+                        score_value += 10
+                        hit_sound.play()
                         bullets.remove(b)
+                        hit_something = True
+                        break
 
-        # Enemy bullets
-        if enemies and random.randint(0, 40) == 1:
+        # 5. Enemy Bullets Logic
+        if not boss["visible"] and enemies and random.randint(0, 40) == 1:
             shopper = random.choice(enemies)
-            enemy_bullets.append(pygame.Rect(shopper.centerx, shopper.bottom, 6, 18))
+            enemy_bullets.append({"rect": pygame.Rect(shopper.centerx, shopper.bottom, 6, 18), "vx": 0})
         
         for eb in enemy_bullets[:]:
-            eb.y += enemy_bullet_speed
+            eb["rect"].y += enemy_bullet_speed
+            eb["rect"].x += eb["vx"]
 
-            if eb.colliderect(player_rect) and (current_time - last_hit_time > invulnerability_duration):
-                lives -= 1
-                last_hit_time = current_time
+            if eb["rect"].colliderect(player_rect):
+                if (current_time - last_hit_time > invulnerability_duration):
+                    lives -= 1
+                    last_hit_time = current_time
+                    hit_sound.play()
+                    if lives <= 0: save_high_score(score_value); game_state = "GAME_OVER"
                 enemy_bullets.remove(eb)
-                hit_sound.play()
-                if lives <= 0:
-                    save_high_score(score_value)
-                    game_state = "GAME_OVER"
-            
-            elif eb.colliderect(player_rect):
-                enemy_bullets.remove(eb)
-            
-            elif eb.y > SCREEN_HEIGHT:
+            elif eb["rect"].y > SCREEN_HEIGHT:
                 enemy_bullets.remove(eb)
 
-        # Draw Stars
+        # 6. Powerups Logic
+        for p in powerups[:]:
+            p["rect"].y += 4
+            color = (0, 200, 255) if p["type"] == "shield" else (255, 50, 50)
+            pygame.draw.rect(screen, color, p["rect"], border_radius=15)
+            if p["rect"].colliderect(player_rect):
+                if p["type"] == "shield": last_hit_time = current_time + 3500
+                else: lives += 1
+                powerups.remove(p)
+            elif p["rect"].y > SCREEN_HEIGHT: powerups.remove(p)
+
+        # 7. DRAWING PHASE
+        # Stars
         for s in stars:
             s[1] += s[2]
             if s[1] > SCREEN_HEIGHT: s[1] = 0; s[0] = random.randint(0, SCREEN_WIDTH)
             pygame.draw.circle(screen, (255, 255, 255), (int(s[0]), int(s[1])), 2)
 
-        # Draw Explosion Particles
+        # Particles
         for p in particles[:]:
-            p["pos"][0] += p["vel"][0]
-            p["pos"][1] += p["vel"][1]
-            p["timer"] -= 1
+            p["pos"][0] += p["vel"][0]; p["pos"][1] += p["vel"][1]; p["timer"] -= 1
+            if p["timer"] <= 0: particles.remove(p)
+            else: pygame.draw.rect(screen, p['color'], (p["pos"][0], p["pos"][1], 4, 4))
 
-            if p["timer"] <= 0:
-                particles.remove(p)
-            else:
-                pygame.draw.rect(screen, p['color'], (p["pos"][0], p["pos"][1], 4, 4))
+        # Boss
+        if boss["visible"]:
+            # Scalam imaginea inamicului pentru Boss
+            screen.blit(boss_img, (boss["rect"].x, boss["rect"].y))
+            boss_hp_bar()
 
-        # Draw Objects
-        is_invulnerable = (current_time - last_hit_time < invulnerability_duration)
-
-
-        if is_invulnerable:
-            if (current_time // 150) % 2 == 0:
-                screen.blit(player_img, (player_x, player_y))
-        else:
-            screen.blit(player_img, (player_x, player_y))
-        
-        
+        # Standard Enemies & Bullets
         for e in enemies: screen.blit(enemy_img, (e.x, e.y))
         for b in bullets: pygame.draw.rect(screen, (255, 255, 0), b)
-        for eb in enemy_bullets: pygame.draw.rect(screen, (200, 50, 50), eb)
+        for eb in enemy_bullets: pygame.draw.rect(screen, (200, 50, 50), eb["rect"])
+        
+        # Player (Blink if invulnerable)
+        is_invulnerable = (current_time - last_hit_time < invulnerability_duration)
+        if not is_invulnerable or (current_time // 150) % 2 == 0:
+            screen.blit(player_img, (player_x, player_y))
+        
         show_ui()
 
-        # Level Up Check
-        if len(enemies) == 0:
+        # 8. Level Transition Logic
+        level_finished = False
+        if not boss["visible"] and len(enemies) == 0:
+            level_finished = True
+        elif boss["visible"] and boss["hp"] <= 0:
+            create_explosion(boss["rect"].centerx, boss["rect"].centery)
+            score_value += 1000
+            level_finished = True
+
+        if level_finished:
             current_level += 1
             game_state = "LEVEL_UP"
-            level_transition_time = pygame.time.get_ticks()
-            invulnerability_duration = 2000
-            enemy_speed_x += 1.2
-            enemy_bullet_speed += 0.8
-            bullets.clear(); enemy_bullets.clear()
+            level_transition_time = current_time
+            bullets.clear()
+            enemy_bullets.clear()
+            spawn_level_content()
 
     elif game_state == "LEVEL_UP":
-        pygame.mouse.set_visible(True)
         draw_scrolling_background(bg_scroll_speed) 
         draw_text(f"LEVEL {current_level}", title_font, (0, 255, 255), SCREEN_WIDTH//2, SCREEN_HEIGHT//2)
         draw_text("GET READY, CAPTAIN!", button_font, (255, 255, 255), SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 120)
-        
-        if pygame.time.get_ticks() - level_transition_time > 2000:
-            spawn_enemies()
+        if current_time - level_transition_time > 2000:
             game_state = "GAME"
     
     elif game_state == "GAME_OVER":
-        pygame.mouse.set_visible(True)
         screen.fill((0, 0, 0))
-
         draw_text("MISSION FAILED", title_font, (255, 0, 0), SCREEN_WIDTH//2, SCREEN_HEIGHT//3)
         draw_text(f"FINAL SCORE: {score_value}", button_font, (255, 255, 255), SCREEN_WIDTH//2, SCREEN_HEIGHT//2)
         draw_text("PRESS 'R' TO RESTART OR 'M' FOR MENU", score_font, (0, 255, 0), SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 150)
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            if event.type == pygame.QUIT: pygame.quit(); sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    reset_game()
-                    game_state = "GAME"
-                if event.key  == pygame.K_m:
-                    reset_game()
-                    game_state = "MENU"
-                
-    
+                if event.key == pygame.K_r: reset_game(); game_state = "GAME"
+                if event.key == pygame.K_m: reset_game(); game_state = "MENU"
 
     pygame.display.flip()
     clock.tick(60)
