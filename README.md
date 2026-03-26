@@ -52,12 +52,12 @@ We have transitioned from a basic prototype to a fully-featured arcade experienc
 
 **Dynamic Scaling:** The Boss is significantly larger and has a dedicated health system.
 **Combat Phases (Enrage Mode):**
-Above 50% HP: The Boss moves at standard speed and fires __________ (completează tu: single shots / basic lasers).
-Below 50% HP: The Boss enters **Enrage Mode**, increasing its speed by __________% and switching to a **Triple Shot Spread** pattern.
-**Smart Projectiles:** Enemies and the Boss now use a dictionary-based projectile system, allowing for __________ (completează tu: diagonal movement / variable horizontal speeds).
+Above 50% HP: The Boss moves at standard speed and fires  single shots.
+Below 50% HP: The Boss enters **Enrage Mode**, increasing its speed by 50% and switching to a **Triple Shot Spread** pattern.
+**Smart Projectiles:** Enemies and the Boss now use a dictionary-based projectile system, allowing for  variable horizontal speeds.
 
 ### 🛠️ Technical Improvements
 
-**Advanced Collision Logic:** Implemented a `hit_something` flag to optimize bullet interactions and prevent __________.
+**Advanced Collision Logic:** Implemented a `hit_something` flag to optimize bullet interactions and prevent infinite loop.
 **Multi-Point Explosions:** Defeating the Boss triggers a chain reaction o  explosions across its frame.
 **State-Based Level Management:** A new level manager that uses the spawn_level_content() operator to toggle between standard waves and Boss encounters.
