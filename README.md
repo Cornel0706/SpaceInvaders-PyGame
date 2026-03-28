@@ -52,12 +52,20 @@ We have transitioned from a basic prototype to a fully-featured arcade experienc
 
 **Dynamic Scaling:** The Boss is significantly larger and has a dedicated health system.
 **Combat Phases (Enrage Mode):**
-Above 50% HP: The Boss moves at standard speed and fires  single shots.
+Above 50% HP: The Boss moves at standard speed and fires single shots.
 Below 50% HP: The Boss enters **Enrage Mode**, increasing its speed by 50% and switching to a **Triple Shot Spread** pattern.
-**Smart Projectiles:** Enemies and the Boss now use a dictionary-based projectile system, allowing for  variable horizontal speeds.
+**Smart Projectiles:** Enemies and the Boss now use a dictionary-based projectile system, allowing for diagonal movement.
 
 ### 🛠️ Technical Improvements
 
-**Advanced Collision Logic:** Implemented a `hit_something` flag to optimize bullet interactions and prevent infinite loop.
+**Advanced Collision Logic:** Implemented a `hit_something` flag to optimize bullet interactions and prevent insta-death.
 **Multi-Point Explosions:** Defeating the Boss triggers a chain reaction o  explosions across its frame.
 **State-Based Level Management:** A new level manager that uses the spawn_level_content() operator to toggle between standard waves and Boss encounters.
+
+## 🌟 What's New in v0.3.5?
+
+**State Machine System:** The game logic is now divided into clear states: `MENU`, `GAME`, `PAUSE`, and `LEVEL_UP`.
+**Pause Menu:** Press `ESC` during gameplay to freeze the action and choose between *Resume* or *Back to Menu*.
+**Asset Management:** All resources (images, sounds, fonts) are organized in the `/assets` folder and loaded centrally via `assets.py`.
+**High DPI Support:** Native fix for high-resolution monitors (tested on 2.5K), ensuring crisp visuals without blur.
+**Modular Architecture:** Moved from a single-file script to a clean, class-based structure (`entities.py`, `utils.py`, `assets.py`).

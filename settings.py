@@ -1,0 +1,22 @@
+import pygame
+
+# --- CULORI ---
+WHITE  = (255, 255, 255)
+RED    = (255, 0, 0)
+BLACK  = (0, 0, 0)
+GREEN  = (0, 255, 0)
+YELLOW = (255, 255, 0)
+
+# --- JUCĂTOR ---
+PLAYER_SIZE = (100, 80)
+
+# --- INAMICI ---
+ENEMY_SIZE = (80, 60)
+INITIAL_ENEMY_SPEED = 4
+ENEMY_MOVE_DOWN = 35
+BULLET_SPEED = 15
+
+# --- BOSS ---
+BOSS_DEFAULT_SIZE = (480, 300)
+BOSS_BASE_HP = 100
+BOSS_BASE_SPEED = 5
