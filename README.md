@@ -1,4 +1,4 @@
-# 🚀 Space Invaders - Full HD Edition (v0.1)
+# 🚀 Space Invaders - Full HD Edition(v0.4)
 
 A modern take on the classic Space Invaders, built with **Pygame**. Optimized for high-resolution displays (up to 2.5K) with smooth mouse controls and dynamic audio.
 
@@ -69,3 +69,29 @@ Below 50% HP: The Boss enters **Enrage Mode**, increasing its speed by 50% and s
 **Asset Management:** All resources (images, sounds, fonts) are organized in the `/assets` folder and loaded centrally via `assets.py`.
 **High DPI Support:** Native fix for high-resolution monitors (tested on 2.5K), ensuring crisp visuals without blur.
 **Modular Architecture:** Moved from a single-file script to a clean, class-based structure (`entities.py`, `utils.py`, `assets.py`).
+
+## 🌟 What's New in v0.4?
+
+### 🫨 Dynamic Screen Shake
+
+Implemented a multi-intensity trauma system. The entire viewport (including UI and Stars) shakes dynamically:
+**Minor:** Enemy destruction.
+**Medium:** Player taking damage / Boss hits.
+**Critical:** Boss destruction (full screen earthquake).
+
+### 🎨 Visual Overhaul & Particles
+
+**Engine Trail:** The player ship now emits real-time particle sparks that react to movement.
+**Enemy Animations:** Aliens now feature a 2-frame "walking" animation (alternating every 500ms).
+**Invulnerability Effects:** Added a pulsing shield and a "blink" animation for the player after taking damage.
+**Cinematic Fade-In:** A smooth black-to-transparent transition at the start of each mission and level.
+
+### 🔊 Pro Audio Management
+
+**Dedicated Channels:** Transitioned to a multi-channel mixer (Player, Explosions, Boss, PowerUps).
+**Sound Priority:** Laser fire no longer cuts off explosion sounds, ensuring a rich acoustic environment.
+
+### 🛠️ Technical Refactoring
+
+**Universal Offset Drawing:** All entity `draw()` methods now support a global `offset` parameter for seamless screen-shake integration.
+**State Consistency:** Fixed "sprinting enemies" bug during level transitions by resetting direction and hit-edge logic.

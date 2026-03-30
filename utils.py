@@ -43,5 +43,20 @@ def move_stars(stars_list, screen_h, screen_w):
 def draw_stars(screen, stars_list):
     for star in stars_list:
         pygame.draw.circle(screen, (255, 255, 255), (star[0], star[1]), 2)
-    
 
+def get_shake_offset(intensity):
+    if intensity > 0:
+        off_x = random.randint(-intensity, intensity)
+        off_y = random.randint(-intensity, intensity)
+        return off_x, off_y
+    return 0, 0
+    
+def create_engine_particles(particles_list, x, y):
+    for _ in range(3):
+        particle = {
+            'pos': [x, y],
+            'vel': [random.uniform(-0.5, 0.5), random.uniform(2, 2)],
+            'timer': random.randint(10, 20),
+            'color': random.choice([(0, 191, 255), (255, 255, 255), (70, 130, 180)])
+        }
+        particles_list.append(particle)
