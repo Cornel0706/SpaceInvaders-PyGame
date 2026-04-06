@@ -95,3 +95,45 @@ Implemented a multi-intensity trauma system. The entire viewport (including UI a
 
 **Universal Offset Drawing:** All entity `draw()` methods now support a global `offset` parameter for seamless screen-shake integration.
 **State Consistency:** Fixed "sprinting enemies" bug during level transitions by resetting direction and hit-edge logic.
+
+---
+
+## 🌟 What's New in v0.5?
+
+The most significant update yet! **v0.5** introduces a complete gameplay loop with an in-game economy, weapon progression, and a persistent state machine.
+
+---
+
+## 💰 New Features: The Economy System
+
+**Credit System:** Score is now a currency! Earn credits by destroying enemies and defeating bosses.
+**The Space Station (Shop):** A new game state between missions where you can spend your hard-earned credits.
+**Refined Game Loop:** Added a "Game Over" state with a clear mission failure summary and a "Re-deploy" (Restart) mechanic.
+
+---
+
+## 🔫 Arsenal Upgrades (Weapon Tiers)
+
+Your ship now features a level-based weapon system:
+**Level 1 (Standard):** Single central blaster.
+**Level 2 (Double Shot):** Dual parallel lasers for wider coverage.
+**Level 3 (Triple Spread):** A powerful 3-way spread shot to dominate the fleet.
+**Hull Repairs:** Purchase additional lives at the Shop to survive longer waves.
+
+---
+
+## 🛠️ Technical Implementation
+
+**Dictionary-Based Projectiles:** Refactored the bullet system to use dictionaries (`rect`, `vx`, `vy`), allowing for complex trajectories and spread patterns.
+**State Machine Expansion:** Added `SHOP` and `GAME_OVER` states for a professional arcade flow.
+**Persistence & Reset:** Implemented full game state resets (direction, scores, weapons) to ensure fair play on every restart.
+**Boss Rewards:** Defeating a Boss now triggers a massive credit bonus and redirects the player to the Space Station.
+
+---
+
+## 🎮 Controls
+
+**Mouse Move:** Pilot the ship.
+**Left Click:** Fire Primary Weapon.
+**Space (In Game Over):** Re-deploy to Level 1.
+**ESC:** Pause/Resume.

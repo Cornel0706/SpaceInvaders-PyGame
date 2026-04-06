@@ -86,10 +86,75 @@ while running:
                     game_state = "PAUSE"
                 elif game_state == "PAUSE":
                     game_state = "GAME"
+            if event.key == pygame.K_SPACE and game_state == "GAME_OVER":
+                score_value = 0
+                current_level = 1
+                player.lives = 3
+                player.weapon_level = 1
+                player.credits = 0
+
+                enemy_direction = 1
+                
+                bullets.clear()
+                enemy_bullets.clear()
+                enemies.clear()
+                particles.clear()
+                enemies = spawn_enemies(assets["enemy_imgs"], SCREEN_WIDTH)
+                boss.visible = False
+                game_state = "GAME"
         
         if event.type == pygame.MOUSEBUTTONDOWN and game_state == "GAME":
-            bullets.append(pygame.Rect(player.rect.centerx - 2, player.rect.top, 5, 15))
+            bx, by = player.rect.centerx, player.rect.top
+
+            if player.weapon_level == 1:
+                bullets.append({"rect": pygame.Rect(bx - 2, by, 5, 15), "vx": 0, "vy": -10})
+            
+            elif player.weapon_level == 2:
+                bullets.append({"rect": pygame.Rect(bx - 15, by, 5, 15), "vx": 0, "vy": -10})
+                bullets.append({"rect": pygame.Rect(bx + 10, by, 5, 15), "vx": 0, "vy": -10})
+            
+            elif player.weapon_level == 3:
+                bullets.append({"rect": pygame.Rect(bx - 2, by, 5, 15), "vx": 0, "vy": -10})
+                bullets.append({"rect": pygame.Rect(bx - 2, by, 5, 15), "vx": -3, "vy": -9})
+                bullets.append({"rect" : pygame.Rect(bx - 2, by, 5, 15), "vx" : 3, "vy" : -9})
+            
             CHANNEL_PLAYER.play(assets["shoot_sound"])
+        
+        if event.type == pygame.MOUSEBUTTONDOWN and game_state == "SHOP":
+            m_pos = pygame.mouse.get_pos()
+
+            #Upgrade Logic
+            if upgrade_btn.collidepoint(m_pos):
+                if player.credits >= 500 and player.weapon_level < 3:
+                    player.credits -= 500
+                    player.weapon_level += 1
+                    CHANNEL_POWERUP.play(assets["explosion_sound"])
+            
+            #Repair Logic
+            if repair_btn.collidepoint(m_pos):
+                if player.credits >= 200 and player.lives < 5:
+                    player.credits -= 200
+                    player.lives += 1
+                    CHANNEL_POWERUP.play(assets["explosion_sound"])
+            
+            #Exit Logic
+            if exit_btn.collidepoint(m_pos):
+                enemy_direction = 1 
+                
+                if current_level % 5 == 0:
+                    boss.visible = True
+                    boss.hp = BOSS_BASE_HP + (current_level * 5)
+                    boss.rect.centerx = SCREEN_WIDTH // 2
+                    enemies = [] 
+                else:
+                    enemies = spawn_enemies(assets["enemy_imgs"], SCREEN_WIDTH)
+                    boss.visible = False
+
+                game_state = "LEVEL_UP"
+                level_start_time = pygame.time.get_ticks()
+                pygame.mouse.set_visible(False)
+
+        
 
     # --- STATE: MENU ---
     if game_state == "MENU":
@@ -125,16 +190,8 @@ while running:
     # --- STATE: LEVEL_UP ---
     elif game_state == "LEVEL_UP":
         draw_text(screen, f"LEVEL {current_level}", assets["title_font"], YELLOW, SCREEN_WIDTH//2, SCREEN_HEIGHT//2)
-        draw_text(screen, "GET READY...", assets["score_font"], WHITE, SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 100)
         
         if current_time - level_start_time > 2000:
-            enemy_direction = 1
-            if current_level % 5 == 0:
-                boss.visible = True
-                boss.hp = BOSS_BASE_HP + (current_level * 5)
-                boss.rect.centerx = SCREEN_WIDTH // 2
-            else:
-                enemies = spawn_enemies(assets["enemy_imgs"], SCREEN_WIDTH)
             game_state = "GAME"
             fade_alpha = 255
 
@@ -176,6 +233,7 @@ while running:
             boss.move()
             enemy_bullets.extend(boss.shoot())
             if boss.hp <= 0:
+                player.credits += 100
                 shake_intensity = 40 
                 boss.visible = False
                 level_start_time = current_time
@@ -183,27 +241,39 @@ while running:
 
         # Player Bullets 
         for b in bullets[:]:
-            b.y -= BULLET_SPEED + 5
-            if b.bottom < 0: bullets.remove(b)
-            else:
-                for e in enemies[:]:
-                    if b.colliderect(e.rect):
-                        shake_intensity = 5 
-                        create_explosion(particles, e.rect.centerx, e.rect.centery)
-                        enemies.remove(e)
-                        if b in bullets: bullets.remove(b)
-                        score_value += 10
-                        CHANNEL_EXPLOSION.play(assets["explosion_sound"])
-                        if random.random() < 0.02:
-                            tipo = random.choice(["life", "shield"])
-                            powerups.append({"rect": pygame.Rect(e.rect.centerx, e.rect.y, 20, 20), "type": tipo})
-                        break
-                
-                if boss.visible and b.colliderect(boss.rect):
-                    boss.hp -= 2
-                    shake_intensity = 3 
-                    create_explosion(particles, b.x, b.y)
-                    if b in bullets: bullets.remove(b)
+            b["rect"].x += b["vx"]
+            b["rect"].y += b["vy"]
+
+            if b["rect"].bottom < 0 or b["rect"].left < 0 or b["rect"].right > SCREEN_WIDTH:
+                bullets.remove(b)
+                continue
+            
+            hit_something = False
+            for e in enemies[:]:
+                if b["rect"].colliderect(e.rect):
+                    shake_intensity = 5
+                    create_explosion(particles, e.rect.centerx, e.rect.centery)
+                    enemies.remove(e)
+                    score_value += 10
+                    player.credits += 2
+                    CHANNEL_EXPLOSION.play(assets["explosion_sound"])
+                    if random.random() < 0.02:
+                        tipo = random.choice(["life", "shield"])
+                        powerups.append({"rect": pygame.Rect(e.rect.centerx, e.rect.y, 20, 20), "type": tipo})
+                    hit_something = True
+                    break
+            
+            if hit_something:
+                bullets.remove(b)
+                continue
+
+            if boss.visible and b["rect"].colliderect(boss.rect):
+                boss.hp -= 2
+                shake_intensity = 3
+                create_explosion(particles, b["rect"].x, b["rect"].y)
+                bullets.remove(b)
+
+                    
 
         # Enemy Bullets
         for eb in enemy_bullets[:]:
@@ -234,7 +304,7 @@ while running:
         if len(enemies) == 0 and not boss.visible:
             current_level += 1
             level_start_time = current_time
-            game_state = "LEVEL_UP"
+            game_state = "SHOP"
             fade_alpha = 255
 
         # --- DRAWING with SHAKE ---
@@ -243,7 +313,7 @@ while running:
         for e in enemies: e.draw(screen, offset=(off_x, off_y))
         
         for b in bullets: 
-            pygame.draw.rect(screen, YELLOW, (b.x + off_x, b.y + off_y, b.width, b.height))
+            pygame.draw.rect(screen, YELLOW, (b["rect"].x + off_x, b["rect"].y + off_y, b["rect"].width, b["rect"].height))
         
         for eb in enemy_bullets: 
             r = eb["rect"]
@@ -259,18 +329,13 @@ while running:
         draw_text(screen, f"Score: {score_value}", assets["score_font"], WHITE, 100 + off_x, 50 + off_y)
         draw_text(screen, f"Level: {current_level}", assets["score_font"], YELLOW, SCREEN_WIDTH // 2 + off_x, 50 + off_y) 
         draw_text(screen, f"Lives: {player.lives}", assets["score_font"], RED, 100 + off_x, 90 + off_y)
+        draw_text(screen, f"Credits: {player.credits}", assets["score_font"], GREEN, 100 + off_x, 130 + off_y)
 
         if player.lives <= 0:
             high_score = save_high_score(score_value, high_score)
-            game_state = "MENU"
-            player.lives = 3
-            score_value = 0
-            current_level = 1
-            enemies = spawn_enemies(assets["enemy_imgs"], SCREEN_WIDTH)
+            game_state = "GAME_OVER"
             bullets.clear()
             enemy_bullets.clear()
-            powerups.clear()
-            boss.visible = False
     
     # --- STATE: PAUSE ---
     elif game_state == "PAUSE":
@@ -278,7 +343,7 @@ while running:
         player.draw(screen, current_time)
         boss.draw(screen)
         for e in enemies: e.draw(screen)
-        for b in bullets: pygame.draw.rect(screen, YELLOW, b)
+        for b in bullets: r = b["rect"]; pygame.draw.rect(screen, YELLOW, (r.x + off_x, r.y + off_y, r.width, r.height))
         for eb in enemy_bullets: pygame.draw.rect(screen, RED, eb["rect"])
 
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -306,6 +371,51 @@ while running:
                 pygame.mouse.set_visible(False)
             elif back_btn.collidepoint(m_pos):
                 game_state = "MENU"
+    
+    elif game_state == "SHOP":
+        pygame.mouse.set_visible(True)
+        screen.fill(BLACK)
+        draw_stars()
+
+        draw_text(screen, "SPACE STATION - UPGRADES", assets["title_font"], YELLOW, SCREEN_WIDTH//2, 100)
+        draw_text(screen, f"CREDITS: {player.credits}", assets["score_font"], WHITE, SCREEN_WIDTH//2, 180)
+        draw_text(screen, f"CURRENT WEAPON LVL: {player.weapon_level}", assets["score_font"], WHITE, SCREEN_WIDTH//2, 220)
+
+        upgrade_btn = pygame.Rect(SCREEN_WIDTH//2 - 200, 300, 400, 60)
+        repair_btn = pygame.Rect(SCREEN_WIDTH//2 - 200, 400, 400, 60)
+        exit_btn = pygame.Rect(SCREEN_WIDTH//2 - 200, 550, 400, 60)
+
+        m_pos = pygame.mouse.get_pos()
+        m_click = pygame.mouse.get_pressed()[0]
+
+        #Weapon upgrade
+        btn_color = GREEN if upgrade_btn.collidepoint(m_pos) else WHITE
+        pygame.draw.rect(screen, btn_color, upgrade_btn, 2)
+        txt_weapon = f"UPGRADE BLASTER (500)" if player.weapon_level < 3 else "BLASTER MAXED OUT"
+        draw_text(screen, txt_weapon, assets["score_font"], btn_color, SCREEN_WIDTH//2, 330)
+
+        #Repair
+        btn_color = GREEN if repair_btn.collidepoint(m_pos) else WHITE
+        pygame.draw.rect(screen, btn_color, repair_btn, 2)
+        draw_text(screen, "REPAIR HULL (200) +1 LIFE", assets["score_font"], btn_color, SCREEN_WIDTH//2, 430)
+
+        #Exit
+        btn_color = RED if exit_btn.collidepoint(m_pos) else WHITE
+        pygame.draw.rect(screen, btn_color, exit_btn, 2)
+        draw_text(screen, "CONTINUE MISSION", assets["score_font"], btn_color, SCREEN_WIDTH//2, 580)
+
+    elif game_state == "GAME_OVER":
+        screen.fill(BLACK)
+        draw_stars()
+
+        draw_text(screen, "MISSION FAILED", assets["title_font"], RED, SCREEN_WIDTH//2, SCREEN_HEIGHT//3)
+        draw_text(screen, f"FINAL SCORE: {score_value}", assets["score_font"], WHITE, SCREEN_WIDTH//2, SCREEN_HEIGHT//2)
+        draw_text(screen, f"LEVEL REACHED: {current_level}", assets["score_font"], WHITE, SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 40)
+
+        draw_text(screen, "PRESS [ SPACE ] TO RE-DEPLOY", assets["score_font"], YELLOW, SCREEN_WIDTH//2, SCREEN_HEIGHT * 0.75)
+
+        pygame.mouse.set_visible(True)
+
 
     if fade_alpha > 0:
         fade_alpha -= 3

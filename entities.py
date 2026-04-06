@@ -23,7 +23,7 @@ class Boss:
             self.speed_x *= 1.5
             self.enraged = True
         
-        self.rect.x += self.speed_x
+        self.rect.x += int(self.speed_x)
         if self.rect.right >= self.screen_w or self.rect.left <= 0:
             self.speed_x *= -1
             
@@ -89,6 +89,8 @@ class Player:
         self.score = 0
         self.is_invulnerable = False
         self.last_hit_time = 0
+        self.weapon_level = 1
+        self.credits = 0
     
     def update(self):
         m_x, m_y = pygame.mouse.get_pos()
